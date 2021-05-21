@@ -9,6 +9,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+find_package(fmt REQUIRED)
+
 set(SRC_LIST src/IO.cpp)
 
 add_executable(main main.cpp ${SRC_LIST})
+
+target_link_libraries(main PRIVATE fmt::fmt)
