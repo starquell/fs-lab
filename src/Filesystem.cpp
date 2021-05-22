@@ -13,42 +13,50 @@ void Filesystem::update(core::Interface::Ptr core) noexcept
 
 void Filesystem::create(const std::string_view name)
 {
-    // TODO():
+    // TODO:
+    throw Error{"not implemented"};
 }
 
 void Filesystem::destroy(const std::string_view name)
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
 auto Filesystem::open(const std::string_view name) -> Directory::Entry::index_type
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
 void Filesystem::close(const Directory::Entry::index_type index)
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
-void Filesystem::read(const Directory::Entry::index_type index, std::span<std::byte> dst)
+auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
-void Filesystem::write(const Directory::Entry::index_type index, const std::span<const std::byte> src)
+auto Filesystem::write(const Directory::Entry::index_type index, const std::span<const std::byte> src) -> std::size_t
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
 void Filesystem::lseek(const Directory::Entry::index_type index, const std::size_t pos)
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
 auto Filesystem::directory() const -> std::vector<File>
 {
     // TODO:
+    throw Error{"not implemented"};
 }
 
 } // namespace fs

@@ -71,9 +71,10 @@ struct cd
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
+        fs.create(in.name);
+        return std::tuple{in.name};
     }
 };
 
@@ -93,9 +94,10 @@ struct de
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
+        fs.destroy(in.name);
+        return std::tuple{in.name};
     }
 };
 
@@ -115,9 +117,10 @@ struct op
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
+        const auto index = fs.open(in.name);
+        return std::tuple{in.name, index};
     }
 };
 
@@ -137,9 +140,10 @@ struct cl
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
+        fs.close(in.index);
+        return std::tuple{in.index};
     }
 };
 
@@ -161,9 +165,13 @@ struct rd
         };
     };
 
-    auto operator()(const Input in, const fs::Filesystem & fs) const
+    auto operator()(const Input in, const fs::Filesystem& fs) const
     {
-        // TODO:
+        std::string result;
+        result.resize(in.count);
+        const auto read = fs.read(in.index, {reinterpret_cast<std::byte*>(result.data()), result.size()});
+        result.resize(read);
+        return std::tuple{read, result};
     }
 };
 
@@ -187,9 +195,12 @@ struct wr
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
+        std::string data;
+        data.assign(in.count, in.ch);
+        const auto written = fs.write(in.index, {reinterpret_cast<const std::byte*>(data.data()), data.size()});
+        return std::tuple{written};
     }
 };
 
@@ -211,9 +222,10 @@ struct sk
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
+        fs.lseek(in.index, in.pos);
+        return std::tuple{in.pos};
     }
 };
 
@@ -224,9 +236,19 @@ struct dr
     static constexpr std::string_view output = "{}";
     static constexpr std::string_view cmd = "dr";
 
-    auto operator()(const fs::Filesystem & fs) const
+    auto operator()(const fs::Filesystem& fs) const
     {
-        // TODO:
+        std::string result;
+        for (const auto& file : fs.directory()) {
+            fmt::format_to(std::back_inserter(result), "{} {}, ", file.name, file.size);
+        }
+
+        /// Remove trailing ", "
+        if (!result.empty()) {
+            result.resize(result.size() - 2);
+        }
+
+        return std::tuple{result};
     }
 };
 
@@ -254,9 +276,10 @@ struct in
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
         // TODO:
+        return std::tuple{"uninitialized"};
     }
 };
 
@@ -276,7 +299,7 @@ struct sv
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem & fs) const
+    auto operator()(const Input in, fs::Filesystem& fs) const
     {
         // TODO:
     }
@@ -334,42 +357,51 @@ void interact(fs::Filesystem& fs)
         fmt::print("cmd> ");
         std::string line;
         std::getline(std::cin, line, '\n');
-        bool found = false;
-        fs::util::for_each_type_in<Commands>([&] (auto t) {
-            using cmd = typename decltype(t)::type;
-            if (!line.starts_with(cmd::cmd)) {
-                return;
-            }
 
-            found = true;
-            if constexpr (detail::has_input<cmd>) {
-                /// Parse arguments
-                using Input = typename cmd::Input;
-                constexpr auto count = std::tuple_size_v<decltype(Input::args)> + 1;
-                const auto tokens = fs::util::split_as_array<count>(line);
-                if (!tokens) {
-                    return error("invalid input");
+        try {
+            bool found = false;
+            fs::util::for_each_type_in<Commands>([&] (auto t) {
+                using cmd = typename decltype(t)::type;
+                if (!line.starts_with(cmd::cmd)) {
+                    return;
                 }
 
-                Input input;
-                const bool valid = std::apply(
-                    [&, idx = 0] (const auto... args) mutable {
-                        return (detail::parse(tokens.value()[++idx], input.*args) && ...);
-                    },
-                    Input::args
-                );
-                if (!valid) {
-                    return error("invalid arguments");
+                found = true;
+                if constexpr (detail::has_input<cmd>) {
+                    /// Parse arguments
+                    using Input = typename cmd::Input;
+                    constexpr auto count = std::tuple_size_v<decltype(Input::args)> + 1;
+                    const auto tokens = fs::util::split_as_array<count>(line);
+                    if (!tokens) {
+                        return error("invalid input");
+                    }
+
+                    Input input;
+                    const bool valid = std::apply(
+                        [&, idx = 0] (const auto... args) mutable {
+                            return (detail::parse(tokens.value()[++idx], input.*args) && ...);
+                        },
+                        Input::args
+                    );
+                    if (!valid) {
+                        return error("invalid arguments");
+                    }
+
+                    process<cmd>(input, fs);
+                } else {
+                    process<cmd>(fs);
                 }
+            });
 
-                process<cmd>(input, fs);
-            } else {
-                process<cmd>(fs);
+            if (!found) {
+                error("unknown command");
             }
-        });
-
-        if (!found) {
-            error("unknown command");
+        } catch(const fs::Error& e) {
+            error(e.what());
+        } catch (const std::exception& e) {
+            error("unknown error: {}", e.what());
+        } catch (...) {
+            error("unknown internal error");
         }
 
         fmt::print("\n");
@@ -380,6 +412,11 @@ void interact(fs::Filesystem& fs)
 
 int main()
 {
+    /// Create empty filesystem
+    fs::Filesystem fs{nullptr};
+
+    /// Run user interaction loop
+    interact(fs);
 
     return 0;
 }

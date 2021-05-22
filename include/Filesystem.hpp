@@ -62,12 +62,14 @@ public:
     /**
      * @brief TODO:
      */
-    void read(Directory::Entry::index_type index, std::span<std::byte> dst);
+    [[nodiscard]]
+    auto read(Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t;
 
     /**
      * @brief TODO:
      */
-    void write(Directory::Entry::index_type index, std::span<const std::byte> src);
+    [[nodiscard]]
+    auto write(Directory::Entry::index_type index, std::span<const std::byte> src) -> std::size_t;
 
     /**
      * @brief TODO:

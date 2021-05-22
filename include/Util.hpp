@@ -67,7 +67,7 @@ template<size_t Size>
 constexpr auto split_as_array(const std::string_view str, const std::string_view separator = " ") noexcept -> std::optional<std::array<std::string_view, Size>>
 {
     std::array<std::string_view, Size> result;
-    if (split(result.begin(), str, separator) == result.size()) {
+    if (split(result.begin(), str, separator, result.size()) == result.size() && result.back().end() == str.end()) {
         return result;
     }
 
