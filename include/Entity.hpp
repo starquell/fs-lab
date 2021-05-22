@@ -23,7 +23,7 @@ struct Directory : File
         index_type index;
     };
 
-    static constexpr index_type index = 0;
+    index_type index;
     std::vector<Entry> entries;
 };
 
