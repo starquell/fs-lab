@@ -282,13 +282,13 @@ struct in
         std::string result{"restored"};
         if (!io) {
             io = fs::IO{in.cylinders, in.tracks, in.sectors, in.block_size};
-            result = "restored";
+            result = "initialized";
         }
 
         // TODO(starquell): uncomment once Cached implemented
         // auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
         // fs.update(std::move(cached));
-        return std::tuple{result};
+        return std::tuple{std::move(result)};
     }
 };
 
