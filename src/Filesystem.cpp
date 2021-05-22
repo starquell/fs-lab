@@ -25,7 +25,7 @@ void Filesystem::update(core::Interface::Ptr core) noexcept
 void Filesystem::create(const std::string_view name)
 {
     if (findFile(*_core->get(_cd), name).has_value()) {
-        throw std::logic_error(fmt::format(R"(file with name "{}" already exists)", name));
+        throw Error{R"(file with name "{}" already exists)", name};
     }
     _core->create(_cd, File{.size = 0, .name = std::string{name}});
 }
@@ -33,10 +33,11 @@ void Filesystem::create(const std::string_view name)
 void Filesystem::destroy(const std::string_view name)
 {
     if (auto file = findFile(*_core->get(_cd), name); !file.has_value()) {
-        throw std::logic_error(fmt::format(R"(file with name "{}" does not exist)", name));
+        throw Error{R"(file with name "{}" does not exist)", name};
     }
     else {
         _core->remove(_cd, file->index);
+        _oft.erase(file->index);
     }
 }
 
@@ -44,23 +45,25 @@ auto Filesystem::open(const std::string_view name) -> Directory::Entry::index_ty
 {
     if (auto file = findFile(*_core->get(_cd), name); file.has_value()) {
         if (_oft.contains(file->index)) {
-            throw std::runtime_error("file is already open.");
+            throw Error{"file is already open."};
         } else {
             _core->open(file->index);
             _oft[file->index] = 0;
             return file->index;
         }
     } else {
-        throw std::runtime_error(fmt::format("file with name {} is not found", name));
+        throw Error{"file with name {} is not found", name};
     }
 }
 
 void Filesystem::close(const Directory::Entry::index_type index)
 {
-    if (!_oft.contains(index)) {
-        throw std::runtime_error("file is not opened");
+    if (auto it = _oft.find(index); it != _oft.end()) {
+        _core->close(index);
+        _oft.erase(it);
+        return;
     }
-    _core->close(index);
+    throw Error{"file is not opened"};
 }
 
 auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t
@@ -69,7 +72,7 @@ auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::b
         it->second = _core->read(index, it->second, dst);
         return it->second;
     }
-    throw std::runtime_error{"file is not opened"};
+    throw Error{"file is not opened"};
 };
 
 auto Filesystem::write(const Directory::Entry::index_type index, const std::span<const std::byte> src) -> std::size_t
@@ -78,7 +81,7 @@ auto Filesystem::write(const Directory::Entry::index_type index, const std::span
         it->second = _core->write(index, it->second, src);
         return it->second;
     }
-    throw std::runtime_error{"file is not opened"};
+    throw Error{"file is not opened"};
 }
 
 void Filesystem::lseek(const Directory::Entry::index_type index, const std::size_t pos)
@@ -86,7 +89,7 @@ void Filesystem::lseek(const Directory::Entry::index_type index, const std::size
     if (auto it = _oft.find(index); it != _oft.end()) {
         it->second = pos;
     }
-    throw std::runtime_error{"file is not opened"};
+    throw Error{"file is not opened"};
 }
 
 auto Filesystem::directory() const -> std::vector<File>
@@ -97,12 +100,12 @@ auto Filesystem::directory() const -> std::vector<File>
     return res;
 }
 
-void Filesystem::save(const std::string_view path) const
+void Filesystem::save(const std::string_view path)
 {
-    // TODO:
-    throw Error{"not implemented"};
-
-    /// Check for empty core before doing this
+    for (const auto& [file, _] : _oft) {
+        close(file);
+    }
+    _oft.clear();
     _core->save(path);
 }
 

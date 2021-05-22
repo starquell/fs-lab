@@ -86,7 +86,7 @@ public:
     /**
      * @brief Save filesystem content for further restoring into specified file.
      */
-    void save(std::string_view path) const;
+    void save(std::string_view path);
 
 private:
     core::Interface::Ptr _core;
