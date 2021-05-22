@@ -33,7 +33,6 @@ struct Interface
     /**
      * @brief Open file for further work.
      */
-    [[nodiscard]]
     virtual auto open(Directory::Entry::index_type index) -> Directory::Entry = 0;
 
     /**

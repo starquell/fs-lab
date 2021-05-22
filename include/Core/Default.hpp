@@ -23,6 +23,10 @@ public:
      */
     void save(std::string_view path) const final;
 
+protected:
+    [[nodiscard]]
+    auto block_length() const noexcept -> std::size_t;
+
 private:
     std::unique_ptr<IO> _io;
 };
