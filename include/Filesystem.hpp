@@ -82,6 +82,11 @@ public:
     [[nodiscard]]
     auto directory() const -> std::vector<File>;
 
+    /**
+     * @brief Save filesystem content for further restoring into specified file.
+     */
+    void save(std::string_view path) const;
+
 private:
     core::Interface::Ptr _core;
     const Directory::index_type _cd = core::Interface::kRoot;

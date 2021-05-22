@@ -254,7 +254,7 @@ struct dr
 
 struct in
 {
-    static constexpr std::string_view usage = "in <cylinders> <surfaces> <sectors> <block_size> <path>";
+    static constexpr std::string_view usage = "in <cylinders> <tracks> <sectors> <block_size> <path>";
     static constexpr std::string_view description = "create a disk using the given dimension parameters and initialize it using the file";
     static constexpr std::string_view output = "disk {}";
     static constexpr std::string_view cmd = "in";
@@ -262,14 +262,14 @@ struct in
     struct Input
     {
         size_t cylinders;
-        size_t surfaces;
+        size_t tracks;
         size_t sectors;
         size_t block_size;
         std::string path;
 
         static constexpr auto args = std::tuple{
             &Input::cylinders,
-            &Input::surfaces,
+            &Input::tracks,
             &Input::sectors,
             &Input::block_size,
             &Input::path
@@ -278,8 +278,17 @@ struct in
 
     auto operator()(const Input in, fs::Filesystem& fs) const
     {
-        // TODO:
-        return std::tuple{"uninitialized"};
+        auto io = fs::IO::load(in.path);
+        std::string result{"restored"};
+        if (!io) {
+            io = fs::IO{in.cylinders, in.tracks, in.sectors, in.block_size};
+            result = "restored";
+        }
+
+        // TODO(starquell): uncomment once Cached implemented
+        // auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
+        // fs.update(std::move(cached));
+        return std::tuple{result};
     }
 };
 
@@ -299,9 +308,9 @@ struct sv
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem& fs) const
+    void operator()(const Input in, const fs::Filesystem& fs) const
     {
-        // TODO:
+        fs.save(in.path);
     }
 };
 

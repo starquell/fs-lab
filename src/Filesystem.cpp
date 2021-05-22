@@ -59,4 +59,13 @@ auto Filesystem::directory() const -> std::vector<File>
     throw Error{"not implemented"};
 }
 
+void Filesystem::save(const std::string_view path) const
+{
+    // TODO:
+    throw Error{"not implemented"};
+
+    /// Check for empty core before doing this
+    _core->save(path);
+}
+
 } // namespace fs

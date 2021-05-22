@@ -12,4 +12,10 @@ Default::Default(std::unique_ptr<IO> io) noexcept :
     _io{std::move(io)}
 { }
 
+
+void Default::save(const std::string_view path) const
+{
+    _io->save(path);
+}
+
 } // namespace fs::core

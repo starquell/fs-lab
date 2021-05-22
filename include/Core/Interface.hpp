@@ -2,6 +2,7 @@
 
 #include <Entity.hpp>
 
+#include <string_view>
 #include <optional>
 #include <memory>
 #include <vector>
@@ -72,6 +73,11 @@ struct Interface
      */
     [[nodiscard]]
     virtual auto get(Directory::index_type dir) const -> std::optional<Directory> = 0;
+
+    /**
+     * @brief Save content for further restoring into specified file.
+     */
+    virtual void save(std::string_view path) const = 0;
 };
 
 } // namespace fs::core

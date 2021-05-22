@@ -42,6 +42,4 @@ namespace fs {
         std::vector<std::vector<std::byte>> _disk;
     };
 
-
-
-}
+} // namespace fs

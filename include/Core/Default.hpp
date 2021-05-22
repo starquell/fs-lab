@@ -18,6 +18,11 @@ public:
      */
     explicit Default(std::unique_ptr<IO> io) noexcept;
 
+    /**
+     * @brief Save content for further restoring into specified file.
+     */
+    void save(std::string_view path) const final;
+
 private:
     std::unique_ptr<IO> _io;
 };
