@@ -2,19 +2,20 @@
 
 #include <vector>
 #include <span>
+#include <optional>
 #include <string_view>
 
 namespace fs {
 
     class IO {
     public:
-        IO (std::size_t nblocks, std::size_t block_length);
-
         /**
-             * @brief Returns span of nth disk block
+         *  @brief Constructs IO with disk, where #ncyl is the number of cylinders, #ntracks is the number of tracks per cylinder,
+         *         #nsectors is the number of sectors(physical blocks) per track and #sector_length is the number of bytes per sector
          */
-        [[nodiscard]]
-        auto get_block(std::size_t n) const -> std::span<const std::byte>;
+        IO (std::size_t ncyl, std::size_t ntracks, std::size_t nsectors, std::size_t block_length);
+
+        IO (std::size_t nblocks, std::size_t block_length);
 
         /**
          *  @brief Reads data from nth disk block to writes to #to
@@ -34,11 +35,13 @@ namespace fs {
         [[nodiscard]]
         auto block_length() const noexcept -> std::size_t;
 
+        auto save(std::string_view path) const -> void;
+        static auto load(std::string_view path) -> std::optional<IO>;
+
     private:
         std::vector<std::vector<std::byte>> _disk;
     };
 
-    auto save(const IO& io, std::string_view path) -> void;
-    auto loadIO(std::string_view path) -> IO;
+
 
 }
