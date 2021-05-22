@@ -54,13 +54,12 @@ struct Interface
      */
     [[nodiscard]]
     virtual auto write(Directory::Entry::index_type index, 
-                       std::size_t pos, 
+                       std::size_t pos,
                        std::span<const std::byte> src) -> std::size_t = 0;
 
     /**
      * @brief Create new file in directory.
      */
-    [[nodiscard]]
     virtual auto create(Directory::index_type dir, const File& file) -> Directory::Entry::index_type = 0;
 
     /**
@@ -69,7 +68,7 @@ struct Interface
     virtual void remove(Directory::index_type dir, Directory::Entry::index_type index) = 0;
 
     /**
-     * @brief List all entries in directory.
+     * @brief List all entries in directory sorted by name.
      */
     [[nodiscard]]
     virtual auto get(Directory::index_type dir) const -> std::optional<Directory> = 0;
