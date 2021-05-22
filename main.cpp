@@ -1,17 +1,16 @@
+#include <Core/Cached.hpp>
+#include <Filesystem.hpp>
 #include <Util.hpp>
+#include <IO.hpp>
 
-#include <string_view>
-#include <string>
-#include <type_traits>
-#include <charconv>
 #include <fmt/format.h>
 #include <fmt/color.h>
+#include <type_traits>
+#include <string_view>
 #include <iostream>
+#include <charconv>
+#include <string>
 #include <tuple>
-
-namespace fs {
-    class Filesystem {};
-} // namespace fs
 
 namespace {
 namespace detail {
@@ -319,14 +318,14 @@ void interact(fs::Filesystem& fs)
     /// Show shell usage message
     fmt::print("SHELL USAGE\n\n");
     fs::util::for_each_type_in<Commands>([] (auto t) {
-        using command = typename decltype(t)::type;
+        using cmd = typename decltype(t)::type;
         fmt::print(
             "* {} - {}\n"
             "     usage: {}\n"
             "\n", 
-            command::cmd,
-            command::description,
-            command::usage
+            cmd::cmd,
+            cmd::description,
+            cmd::usage
         );
     });
 
@@ -343,10 +342,6 @@ void interact(fs::Filesystem& fs)
             }
 
             found = true;
-            const auto invoke = [] (auto&&... args) {
-                return cmd{}(std::forward<decltype(args)>(args)...);
-            };
-
             if constexpr (detail::has_input<cmd>) {
                 /// Parse arguments
                 using Input = typename cmd::Input;
@@ -385,10 +380,6 @@ void interact(fs::Filesystem& fs)
 
 int main()
 {
-    fs::Filesystem fs;
-
-    /// Run user interaction loop
-    interact(fs);
 
     return 0;
 }
