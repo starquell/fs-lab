@@ -285,9 +285,8 @@ struct in
             result = "initialized";
         }
 
-        // TODO(starquell): uncomment once Cached implemented
-        // auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
-        // fs = std::make_unique<fs::Filesystem>(std::move(cached));
+        auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
+        fs = std::make_unique<fs::Filesystem>(std::move(cached));
         return std::tuple{std::move(result)};
     }
 };
