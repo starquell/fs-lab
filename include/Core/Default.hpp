@@ -30,6 +30,7 @@ public:
                       std::size_t pos,
                       std::span<std::byte> dst) const -> std::size_t override;
 
+
     /**
      * @brief Write data from @a dst starting at position @a pos.
      */
@@ -54,12 +55,15 @@ public:
      */
     [[nodiscard]]
     auto get(Directory::index_type dir) const -> std::optional<Directory> override;
-protected:
+
     /**
-     * @brief Get const reference to I/O pointer
-     * @return const reference to I/O pointer
+     * @brief Save content for further restoring into specified file.
      */
-    auto get_io() const noexcept -> const std::unique_ptr<IO>&;
+    void save(std::string_view path) const final;
+
+protected:
+    [[nodiscard]]
+    auto block_length() const noexcept -> std::size_t;
 
     /**
      * @brief Initialize root directory

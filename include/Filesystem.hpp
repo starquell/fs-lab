@@ -3,6 +3,7 @@
 #include <Core/Interface.hpp>
 #include <Entity.hpp>
 
+#include <unordered_map>
 #include <fmt/format.h>
 #include <stdexcept>
 #include <utility>
@@ -62,12 +63,14 @@ public:
     /**
      * @brief TODO:
      */
-    void read(Directory::Entry::index_type index, std::span<std::byte> dst);
+    [[nodiscard]]
+    auto read(Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t;
 
     /**
      * @brief TODO:
      */
-    void write(Directory::Entry::index_type index, std::span<const std::byte> src);
+    [[nodiscard]]
+    auto write(Directory::Entry::index_type index, std::span<const std::byte> src) -> std::size_t;
 
     /**
      * @brief TODO:
@@ -80,9 +83,15 @@ public:
     [[nodiscard]]
     auto directory() const -> std::vector<File>;
 
+    /**
+     * @brief Save filesystem content for further restoring into specified file.
+     */
+    void save(std::string_view path);
+
 private:
     core::Interface::Ptr _core;
     const Directory::index_type _cd = core::Interface::kRoot;
+    mutable std::unordered_map<Directory::Entry::index_type, std::size_t> _oft;  // maps file indices to current positions in file
 };
 
 } // namespace fs

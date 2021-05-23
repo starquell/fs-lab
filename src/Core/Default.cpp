@@ -89,8 +89,9 @@ auto Default::read(Directory::Entry::index_type index, std::size_t pos, std::spa
 
 }
 
-
-
-
+void Default::save(const std::string_view path) const
+{
+    _io->save(path);
+}
 
 } // namespace fs::core
