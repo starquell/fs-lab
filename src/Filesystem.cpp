@@ -15,11 +15,6 @@ Filesystem::Filesystem(core::Interface::Ptr core) noexcept :
     _core{std::move(core)}
 { }
 
-void Filesystem::update(core::Interface::Ptr core) noexcept
-{
-    _core = std::move(core);
-}
-
 void Filesystem::create(const std::string_view name)
 {
     if (findFile(*_core->get(_cd), name).has_value()) {

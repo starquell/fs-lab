@@ -59,7 +59,7 @@ struct cd
 {
     static constexpr std::string_view usage = "cd <name>";
     static constexpr std::string_view description = "create a new file with the name <name>";
-    static constexpr std::string_view output = R"(file "{}" created)";
+    static constexpr std::string_view output = "file {} created";
     static constexpr std::string_view cmd = "cd";
 
     struct Input
@@ -82,7 +82,7 @@ struct de
 {
     static constexpr std::string_view usage = "de <name>";
     static constexpr std::string_view description = "destroy the named file <name>";
-    static constexpr std::string_view output = R"(file "{}" destroyed)";
+    static constexpr std::string_view output = "file {} destroyed";
     static constexpr std::string_view cmd = "de";
 
     struct Input
@@ -105,7 +105,7 @@ struct op
 {
     static constexpr std::string_view usage = "op <name>";
     static constexpr std::string_view description = "open the named file <name> for reading and writing; display an index value";
-    static constexpr std::string_view output = R"(file "{}" opened, index={})";
+    static constexpr std::string_view output = "file {} opened, index={}";
     static constexpr std::string_view cmd = "op";
 
     struct Input
@@ -151,7 +151,7 @@ struct rd
 {
     static constexpr std::string_view usage = "rd <index> <count>";
     static constexpr std::string_view description = "sequentially read a number of bytes <count> from the specified file <index> and display them on the terminal";
-    static constexpr std::string_view output = R"({} bytes read: "{}")";
+    static constexpr std::string_view output = "({} bytes read: {}";
     static constexpr std::string_view cmd = "rd";
 
     struct Input
@@ -276,7 +276,7 @@ struct in
         };
     };
 
-    auto operator()(const Input in, fs::Filesystem& fs) const
+    auto operator()(const Input in, std::unique_ptr<fs::Filesystem>& fs) const
     {
         auto io = fs::IO::load(in.path);
         std::string result{"restored"};
@@ -287,7 +287,7 @@ struct in
 
         // TODO(starquell): uncomment once Cached implemented
         // auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
-        // fs.update(std::move(cached));
+        // fs = std::make_unique<fs::Filesystem>(std::move(cached));
         return std::tuple{std::move(result)};
     }
 };
@@ -345,7 +345,9 @@ void process(Args&&... args)
     }
 }
 
-void interact(fs::Filesystem& fs)
+} // namespace
+
+int main()
 {
     /// Show shell usage message
     fmt::print("SHELL USAGE\n\n");
@@ -360,6 +362,9 @@ void interact(fs::Filesystem& fs)
             cmd::usage
         );
     });
+
+    /// Create dummy filesystem
+    std::unique_ptr<fs::Filesystem> fs;
 
     /// Run main loop
     for (;;) {
@@ -396,9 +401,21 @@ void interact(fs::Filesystem& fs)
                         return error("invalid arguments");
                     }
 
-                    process<cmd>(input, fs);
+                    if constexpr (std::is_same_v<cmd, in>) {
+                        process<cmd>(input, fs);
+                    } else {
+                        if (!fs) {
+                            return error("filesystem should be initialized");
+                        }
+
+                        process<cmd>(input, *fs);
+                    }
                 } else {
-                    process<cmd>(fs);
+                    if (!fs) {
+                        return error("filesystem should be initialized");
+                    }
+
+                    process<cmd>(*fs);
                 }
             });
 
@@ -415,17 +432,6 @@ void interact(fs::Filesystem& fs)
 
         fmt::print("\n");
     }
-}
-
-} // namespace
-
-int main()
-{
-    /// Create empty filesystem
-    fs::Filesystem fs{nullptr};
-
-    /// Run user interaction loop
-    interact(fs);
 
     return 0;
 }
