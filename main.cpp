@@ -308,7 +308,7 @@ struct sv
         };
     };
 
-    void operator()(const Input in, const fs::Filesystem& fs) const
+    void operator()(const Input in, fs::Filesystem& fs) const
     {
         fs.save(in.path);
     }
