@@ -33,12 +33,6 @@ public:
     explicit Filesystem(core::Interface::Ptr core) noexcept;
 
     /**
-     * @brief Provide new underlying core interace. E. g. to update caching 
-     *        policy or to update underlying I/O system properties.
-     */
-    void update(core::Interface::Ptr core) noexcept;
-
-    /**
      * @brief TODO:
      */
     void create(std::string_view name);

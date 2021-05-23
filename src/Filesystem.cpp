@@ -6,11 +6,6 @@ Filesystem::Filesystem(core::Interface::Ptr core) noexcept :
     _core{std::move(core)}
 { }
 
-void Filesystem::update(core::Interface::Ptr core) noexcept
-{
-    _core = std::move(core);
-}
-
 void Filesystem::create(const std::string_view name)
 {
     // TODO:
