@@ -21,7 +21,6 @@ public:
      /**
      * @brief Open file for further work.
      */
-    [[nodiscard]]
     auto open(Directory::Entry::index_type index) -> Directory::Entry override;
 
     /**
@@ -63,11 +62,15 @@ public:
 
 
 private:
-    mutable std::unordered_map<Directory::index_type, bool> _dir_been_listed;  // for check if we fetched all files in dir from Default::get
     mutable std::unordered_map<Directory::index_type, Directory> _dir_cache;  // file metadata cache
 
-    mutable std::unordered_map<Directory::Entry::index_type,
-                               std::unordered_map<std::size_t, std::vector<std::byte>>> _buffers;  /// we map pos in files to buffers
+    struct Buffer {
+        std::size_t pos;
+        std::vector<std::byte> data;
+
+        auto get_unread_bytes() -> std::span<std::byte>;
+    };
+    mutable std::unordered_map<Directory::Entry::index_type, Buffer> _buffers;
 };
 
 } // namespace fs::core

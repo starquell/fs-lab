@@ -1,7 +1,5 @@
 #include <Filesystem.hpp>
 
-#include <fmt/format.h>
-
 namespace {
 
     auto findFile (const fs::Directory& dir, const std::string_view filename) -> std::optional<fs::Directory::Entry>
