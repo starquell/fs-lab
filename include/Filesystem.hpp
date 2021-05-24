@@ -2,25 +2,13 @@
 
 #include <Core/Interface.hpp>
 #include <Entity.hpp>
+#include <Error.hpp>
 
 #include <unordered_map>
-#include <fmt/format.h>
-#include <stdexcept>
 #include <utility>
 #include <span>
 
 namespace fs {
-
-/**
- * @brief Dedicated exception for errors occurred in filesystem functions.
- */
-struct Error final : std::runtime_error
-{
-    template<typename F, typename... Args>
-    explicit(sizeof...(Args) == 0) Error(F&& format, Args&&... args) :
-        runtime_error{fmt::format(std::forward<F>(format), std::forward<Args>(args)...)}
-    { }
-};
 
 /**
  * @brief Old good file system with UNIX-like interface.

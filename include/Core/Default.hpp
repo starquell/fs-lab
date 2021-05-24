@@ -2,6 +2,7 @@
 
 #include <Core/Interface.hpp>
 #include <IO.hpp>
+#include <Error.hpp>
 
 #include <memory>
 #include <deque>
@@ -75,6 +76,7 @@ protected:
         std::size_t byte;
     };
 
+
     /**
      * @brief Finds position of a structure satisfying the @a predicate in a sequence of blocks (TODO: concepts?)
      *
@@ -85,6 +87,17 @@ protected:
     template <class Type, class InputIt, class UnaryPredicate>
     auto find_value_on_disk_blocks_if(InputIt begin, InputIt end, UnaryPredicate predicate) const
         -> std::optional<IOPosition>;
+
+    /**
+     * @brief Reads the given @a value to a sequence
+     *
+     * @param value value to read
+     * @param begin,end range of disc block indexes to examine
+     * @param position position to read the @a value
+     * @return number of bytes read
+     */
+    template <class Type, class InputIt>
+    auto read_value_from_disk_blocks(InputIt begin, InputIt end, IOPosition position) -> std::optional<Type>;
 
     /**
      * @brief Writes the given @a value to a sequence
@@ -103,10 +116,10 @@ protected:
      */
     auto calculate_k() const -> std::size_t;
 private:
-    std::unique_ptr<IO> _io;                              ///< I/O system
-    const std::size_t _k;                                 ///< Size of metadata (naming according to task)
-    mutable std::vector<std::byte> _block_buffer;         ///< Buffer used to write/read to/from I/O
-    std::vector<std::size_t> _descriptor_blocks_indexes;  ///< Indexes of blocks with descriptors
+    std::unique_ptr<IO> _io;                              // I/O system
+    const std::size_t _k;                                 // Size of metadata (naming according to task)
+    mutable std::vector<std::byte> _block_buffer;         // Buffer used to write/read to/from I/O
+    std::vector<std::size_t> _descriptor_blocks_indexes;  // Indexes of blocks with descriptors
 };
 
 template <class Type, class InputIt, class UnaryPredicate>
@@ -124,7 +137,7 @@ auto Default::find_value_on_disk_blocks_if(InputIt begin, InputIt end, UnaryPred
     for (auto it = begin; it != end; ++it) {
         while (type_size <= accumulating_buffer.size()) {
             Type value{};
-            memcpy(&value, &*accumulating_buffer.begin(), type_size); ///< pain
+            memcpy(&value, &*accumulating_buffer.begin(), type_size); // pain
 
             if (predicate(value)) {
                 return {IOPosition{
@@ -136,9 +149,9 @@ auto Default::find_value_on_disk_blocks_if(InputIt begin, InputIt end, UnaryPred
                     accumulating_buffer.begin(),
                     accumulating_buffer.begin() + type_size);
         }
-        accumulating_buffer.resize(accumulating_buffer.size() + block_length); ///< allocate memory for a new block
-        _io->read_block(*it, std::span{_block_buffer}); ///< read a new block from disk
-        accumulating_buffer.insert(std::back_inserter(accumulating_buffer), buffer.begin(), buffer.end()); ///< accumulate read buffer
+        accumulating_buffer.resize(accumulating_buffer.size() + block_length); // allocate memory for a new block
+        _io->read_block(*it, std::span{_block_buffer}); // read a new block from disk
+        accumulating_buffer.insert(std::back_inserter(accumulating_buffer), _block_buffer.begin(), _block_buffer.end()); // accumulate read buffer
         ++blocks_read;
     }
 
@@ -146,8 +159,45 @@ auto Default::find_value_on_disk_blocks_if(InputIt begin, InputIt end, UnaryPred
 }
 
 template <class Type, class InputIt>
+auto Default::read_value_from_disk_blocks(InputIt begin, InputIt end, IOPosition position) -> std::optional<Type> {
+    if (end - begin < position.block + 1) { // invalid input data case
+        return std::nullopt;
+    }
+
+    static constexpr auto type_size = sizeof(Type);
+    const std::size_t block_length = _io->block_length();
+
+    std::vector<std::byte> serialized_value(type_size);
+
+    auto it = begin + position.block;
+    _io->read_block(*(it++), std::span{_block_buffer});
+    std::size_t bytes_read = std::min(type_size, _block_buffer.size() - position.byte);
+
+    std::copy_n(_block_buffer.begin() + position.byte,
+                bytes_read,
+                serialized_value.begin()); // put bytes from a first read block
+
+    while (it != end && serialized_value.size() > bytes_read) {
+        _io->read_block(*(it++), std::span{_block_buffer});
+        std::size_t bytes_to_read = std::min(serialized_value.size() - bytes_read, _block_buffer.size());
+        std::copy_n(_block_buffer.begin(),
+                    bytes_to_read,
+                    serialized_value.begin() + bytes_read); // continue filling the tail of serialized value from read block
+        bytes_read += bytes_to_read;
+    }
+
+    if (bytes_read < type_size) { // not enough bytes to read such data
+        return std::nullopt;
+    }
+
+    Type value{};
+    memcpy(&value, &*serialized_value.begin(), type_size); // pain again
+    return {value};
+}
+
+template <class Type, class InputIt>
 auto Default::write_value_to_disk_blocks(Type value, InputIt begin, InputIt end, IOPosition position) -> std::size_t {
-    if (end - begin < position.block + 1) { ///< invalid input data case
+    if (end - begin < position.block + 1) { // invalid input data case
         return 0u;
     }
 
@@ -155,20 +205,21 @@ auto Default::write_value_to_disk_blocks(Type value, InputIt begin, InputIt end,
     const std::size_t block_length = _io->block_length();
 
     std::vector<std::byte> serialized_value(type_size);
-    memcpy(&*serialized_value.begin(), &value, type_size); ///< pain again
+    memcpy(&*serialized_value.begin(), &value, type_size); // and again
 
     std::size_t bytes_written = 0u;
     auto it = begin + position.block;
     _io->read_block(*it, std::span{_block_buffer});
     std::copy_n(serialized_value.begin(),
                 std::min(serialized_value.size(), _block_buffer.size() - position.byte),
-                _block_buffer.begin() + position.byte); ///< fill the first block of a slot for a value
+                _block_buffer.begin() + position.byte); // fill the first block of a slot for a value
     bytes_written += _io->write_block(*(it++), std::span{_block_buffer});
+
     while (it != end && serialized_value.size() > bytes_written) {
         _io->read_block(*it, std::span{_block_buffer});
         std::copy_n(serialized_value.begin() + bytes_written,
                     std::min(serialized_value.size() - bytes_written, _block_buffer.size()),
-                    _block_buffer.begin()); ///< continue filling the tail of serialized value into its slot
+                    _block_buffer.begin()); // continue filling the tail of serialized value into its slot
         bytes_written += _io->write_block(*(it++), std::span{_block_buffer});
     }
 
