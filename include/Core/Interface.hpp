@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Entity.hpp>
+ #include <Entity.hpp>
 
 #include <string_view>
 #include <optional>
@@ -60,6 +60,13 @@ struct Interface
      * @brief Create new file in directory.
      */
     virtual auto create(Directory::index_type dir, const File& file) -> Directory::Entry::index_type = 0;
+
+    /**
+     * @brief Search file by name in directory.
+     */
+    [[nodiscard]]
+    virtual auto search(Directory::index_type dir, std::string_view name) const
+        -> std::optional<Directory::Entry::index_type> = 0;
 
     /**
      * @brief Remove file from the directory.

@@ -62,8 +62,9 @@ void Filesystem::close(const Directory::Entry::index_type index)
 auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
-        it->second = _core->read(index, it->second, dst);
-        return it->second;
+        const auto read = _core->read(index, it->second, dst);
+        it->second += read;
+        return read;
     }
     throw Error{"file is not opened"};
 };
@@ -71,8 +72,9 @@ auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::b
 auto Filesystem::write(const Directory::Entry::index_type index, const std::span<const std::byte> src) -> std::size_t
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
-        it->second = _core->write(index, it->second, src);
-        return it->second;
+        const auto written = _core->write(index, it->second, src);
+        it->second += written;
+        return written;
     }
     throw Error{"file is not opened"};
 }
@@ -89,7 +91,7 @@ auto Filesystem::directory() const -> std::vector<File>
 {
     auto res = std::vector<File>{};
     auto entries = _core->get(_cd)->entries;
-    std::transform(entries.begin(), entries.end(), res.begin(), [] (auto& entry) {return std::move(entry);});
+    std::transform(entries.begin(), entries.end(), std::back_inserter(res), [] (auto& entry) {return std::move(entry);});
     return res;
 }
 
