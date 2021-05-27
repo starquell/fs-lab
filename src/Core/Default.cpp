@@ -30,9 +30,9 @@ auto get_bit(std::span<const std::byte> bitmap, std::size_t index) -> bool {
     return static_cast<bool>((bitmap[block_num] >> (CHAR_BIT - 1 - in_block_position)) & bitmask);
 }
 
-auto count_free_bits(std::span<const std::byte> bitmap) -> std::size_t {
+auto count_free_bits(std::span<const std::byte> bitmap, std::size_t max_bits) -> std::size_t {
     std::size_t free_bits = 0u;
-    for (std::size_t i = 0u; i < bitmap.size() * CHAR_BIT; ++i) {
+    for (std::size_t i = 0u; i < std::min(bitmap.size() * CHAR_BIT, max_bits); ++i) {
         if (!get_bit(bitmap, i)) {
             ++free_bits;
         }
@@ -118,6 +118,10 @@ auto Default::calculate_k() const -> std::size_t {
     return k;
 }
 
+auto Default::data_blocks_count() const noexcept -> std::size_t {
+    return _io->blocks_number() - _k;
+}
+
 auto Default::IOPosition::fromIndex(std::size_t index, std::size_t block_length) noexcept -> IOPosition {
     return {.block = index / block_length,
             .byte = index % block_length};
@@ -128,7 +132,7 @@ auto Default::allocate_blocks(std::span<std::size_t> blocks_ref, std::size_t blo
 {
     std::size_t current_block_index = blocks_allocated;
     for (std::size_t i = 0u;
-         i < block_length * CHAR_BIT
+         i < std::min(block_length * CHAR_BIT, data_blocks_count())
             && current_block_index < std::min(
                  blocks_allocated + blocks_to_allocate,
                  blocks_ref.size());
@@ -182,7 +186,7 @@ auto Default::create(Directory::index_type dir, const File &file) -> Directory::
         }
 
         _io->read_block(bitmap_block_number, _block_buffer); // reading bitmap in main memory
-        if (blocks_to_allocate <= count_free_bits(_block_buffer)) { // allocate new blocks in a cached bitmap
+        if (blocks_to_allocate <= count_free_bits(_block_buffer, data_blocks_count())) { // allocate new blocks in a cached bitmap
             allocate_blocks(directory_descriptor.blocks, blocks_allocated, blocks_to_allocate, block_length);
         } else {
             throw Error("not enough space on disk to create a new file");

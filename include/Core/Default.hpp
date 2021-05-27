@@ -170,6 +170,13 @@ protected:
      * @return number of metadata blocks
      */
     auto calculate_k() const -> std::size_t;
+
+    /**
+     * @brief Get count of data blocks
+     * @return data blocks count
+     */
+    auto data_blocks_count() const noexcept -> std::size_t;
+
 private:
     std::unique_ptr<IO> _io;                              // I/O system
     const std::size_t _k;                                 // Size of metadata (naming according to task)
