@@ -165,11 +165,11 @@ auto Default::create(Directory::index_type dir, const File &file) -> Directory::
             directory_position).value();
 
     const auto block_length = _io->block_length();
+    std::size_t bytes_processed = 0u;
     auto free_entry_slot = find_value_on_disk_blocks_if<DirectoryEntry>(
             directory_descriptor.blocks.begin(),
             directory_descriptor.blocks.begin() + directory_descriptor.blocks_allocated(block_length),
-            [length = directory_descriptor.length](const auto& directory_entry) {
-                static size_t bytes_processed = 0u;
+            [&bytes_processed, length = directory_descriptor.length](const auto& directory_entry) {
                 if (bytes_processed < length && !directory_entry.is_occupied) {
                     return true;
                 }
