@@ -188,7 +188,7 @@ auto Default::find_value_on_disk_blocks_if(InputIt begin, InputIt end, UnaryPred
     std::size_t values_serialized = 0u;
 
     for (auto it = begin; it != end; ++it) {
-        _io->read_block(*it, std::span{_block_buffer}); // read a new block from disk
+        _io->read_block(*it, _block_buffer); // read a new block from disk
         std::copy(
                 _block_buffer.begin(), _block_buffer.end(), std::back_inserter(accumulating_buffer)); // accumulate read buffer
 
@@ -226,7 +226,7 @@ auto Default::read_bytes_from_disk_blocks(
                 bytes.begin()); // put bytes from a first read block
 
     while (it != end && bytes.size() > bytes_read) {
-        _io->read_block(*(it++), std::span{_block_buffer});
+        _io->read_block(*(it++), _block_buffer);
         std::size_t bytes_to_read = std::min(bytes.size() - bytes_read, _block_buffer.size());
         std::copy_n(_block_buffer.begin(),
                     bytes_to_read,
@@ -235,6 +235,7 @@ auto Default::read_bytes_from_disk_blocks(
     }
     return bytes_read;
 }
+
 template <class Type, class InputIt>
 auto Default::read_value_from_disk_blocks(InputIt begin, InputIt end, Default::IOPosition position) const
         -> std::optional<Type>
@@ -260,7 +261,7 @@ auto Default::write_bytes_to_disk_blocks(std::span<const std::byte> bytes, Input
     }
 
     auto it = begin + position.block;
-    _io->read_block(*it, std::span{_block_buffer});
+    _io->read_block(*it, _block_buffer);
     std::size_t bytes_written = std::min(bytes.size(), _block_buffer.size() - position.byte);
     std::copy_n(bytes.begin(),
                 bytes_written,
@@ -268,17 +269,18 @@ auto Default::write_bytes_to_disk_blocks(std::span<const std::byte> bytes, Input
     _io->write_block(*(it++), std::span{_block_buffer});
 
     while (it != end && bytes.size() > bytes_written) {
-        _io->read_block(*it, std::span{_block_buffer});
+        _io->read_block(*it, _block_buffer);
         const auto bytes_to_rewrite = std::min(bytes.size() - bytes_written, _block_buffer.size());
         std::copy_n(bytes.begin() + bytes_written,
                     bytes_to_rewrite,
                     _block_buffer.begin()); // continue filling the tail of serialized value into its slot
         bytes_written += bytes_to_rewrite;
-        _io->write_block(*(it++), std::span{_block_buffer});
+        _io->write_block(*(it++), _block_buffer);
     }
 
     return bytes_written;
 }
+
 template <class Type, class InputIt>
 auto Default::write_value_to_disk_blocks(Type value, InputIt begin, InputIt end, Default::IOPosition position)
     -> std::size_t
