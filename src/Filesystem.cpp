@@ -1,14 +1,5 @@
 #include <Filesystem.hpp>
 
-namespace {
-
-    auto findFile (const fs::Directory& dir, const std::string_view filename) -> std::optional<fs::Directory::Entry>
-    {
-        auto file = std::lower_bound(dir.entries.begin(), dir.entries.end(), filename,
-                                       [&] (const auto& file, const auto& filename) { return file.name < filename; });
-        return (file != dir.entries.end() && file->name == filename) ? std::optional{*file} : std::nullopt;
-    }
-}
 namespace fs {
 
 Filesystem::Filesystem(core::Interface::Ptr core) noexcept :
@@ -17,7 +8,7 @@ Filesystem::Filesystem(core::Interface::Ptr core) noexcept :
 
 void Filesystem::create(const std::string_view name)
 {
-    if (findFile(*_core->get(_cd), name).has_value()) {
+    if (_core->search(_cd, name).has_value()) {
         throw Error{R"(file with name "{}" already exists)", name};
     }
     _core->create(_cd, File{.size = 0, .name = std::string{name}});
@@ -25,24 +16,24 @@ void Filesystem::create(const std::string_view name)
 
 void Filesystem::destroy(const std::string_view name)
 {
-    if (auto file = findFile(*_core->get(_cd), name); !file.has_value()) {
+    if (auto file_index = _core->search(_cd, name); !file_index.has_value()) {
         throw Error{R"(file with name "{}" does not exist)", name};
     }
     else {
-        _core->remove(_cd, file->index);
-        _oft.erase(file->index);
+        _core->remove(_cd, *file_index);
+        _oft.erase(*file_index);
     }
 }
 
 auto Filesystem::open(const std::string_view name) -> Directory::Entry::index_type
 {
-    if (auto file = findFile(*_core->get(_cd), name); file.has_value()) {
-        if (_oft.contains(file->index)) {
+    if (auto file = _core->search(_cd, name); file.has_value()) {
+        if (_oft.contains(*file)) {
             throw Error{"file is already open."};
         } else {
-            _core->open(file->index);
-            _oft[file->index] = 0;
-            return file->index;
+            _core->open(*file);
+            _oft[*file] = 0;
+            return *file;
         }
     } else {
         throw Error{"file with name {} is not found", name};

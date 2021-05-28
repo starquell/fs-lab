@@ -72,6 +72,18 @@ auto Cached::create(Directory::index_type dir, const File& file) -> Directory::E
     return res;
 }
 
+auto Cached::search(Directory::index_type dir, std::string_view name) const -> std::optional<Directory::Entry::index_type>
+{
+    if (auto found_dir = _dir_cache.find(dir); found_dir != _dir_cache.end()) {
+        const auto file = std::lower_bound(found_dir->second.entries.begin(), found_dir->second.entries.end(), name,
+                                       [&] (const auto& file, const auto& name) { return file.name < name; });
+        if (file != found_dir->second.entries.end() && file->name == name) {
+            return file->index;
+        }
+    }
+    return std::nullopt;
+}
+
 void Cached::remove(Directory::index_type dir, Directory::Entry::index_type index)
 {
     Default::remove(dir, index);
@@ -96,7 +108,6 @@ auto Cached::get(Directory::index_type dir) const -> std::optional<Directory>
         return directory;
     }
 }
-
 
 auto Cached::Buffer::get_unread_bytes() -> std::span<std::byte>
 {

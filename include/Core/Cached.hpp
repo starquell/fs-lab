@@ -49,6 +49,10 @@ public:
      */
     auto create(Directory::index_type dir, const File& file) -> Directory::Entry::index_type override;
 
+    [[nodiscard]]
+    auto search(Directory::index_type dir, std::string_view name) const
+     -> std::optional<Directory::Entry::index_type> override;
+
     /**
      * @brief Remove file from the directory.
      */
