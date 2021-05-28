@@ -18,11 +18,6 @@ public:
      */
     explicit Cached(std::unique_ptr<IO> io) noexcept;
 
-     /**
-     * @brief Open file for further work.
-     */
-    auto open(Directory::Entry::index_type index) -> Directory::Entry override;
-
     /**
      * @brief Close file and possibly free all associated resources.
      */

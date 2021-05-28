@@ -24,15 +24,9 @@ public:
     explicit Default(std::unique_ptr<IO> io);
 
     /**
-     * @brief Open file for further work.
-     */
-    auto open(Directory::Entry::index_type index) -> Directory::Entry override;
-
-    /**
      * @brief Close file and possibly free all associated resources.
      */
     void close(Directory::Entry::index_type index) override;
-
 
     /**
     * @brief Read data into @a dst start from provided @a pos.
@@ -41,7 +35,6 @@ public:
     auto read(Directory::Entry::index_type index,
                       std::size_t pos,
                       std::span<std::byte> dst) const -> std::size_t override;
-
 
     /**
      * @brief Write data from @a dst starting at position @a pos.

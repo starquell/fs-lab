@@ -6,11 +6,6 @@ Cached::Cached(std::unique_ptr<IO> io) noexcept :
     Default{std::move(io)}
 {}
 
-auto Cached::open(Directory::Entry::index_type index) -> Directory::Entry
-{
-    return Default::open(index);
-}
-
 void Cached::close(Directory::Entry::index_type index)
 {
     _buffers.erase(index);

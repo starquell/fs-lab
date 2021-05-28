@@ -297,11 +297,6 @@ void Default::remove(Directory::index_type dir, Directory::Entry::index_type ind
             descriptor_position); // free the descriptor
 }
 
-auto Default::open(Directory::Entry::index_type index) -> Directory::Entry {
-    // no additional logic on file opening
-    return {};
-}
-
 void Default::close(Directory::Entry::index_type index) {
     // no additional logic on file closing
 }
