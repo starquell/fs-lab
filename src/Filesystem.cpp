@@ -31,7 +31,6 @@ auto Filesystem::open(const std::string_view name) -> file_index_type
         if (_oft.contains(*file)) {
             throw Error{"file is already open."};
         } else {
-            _core->open(*file);
             _oft[*file] = 0;
             return *file;
         }
@@ -74,6 +73,7 @@ void Filesystem::lseek(const file_index_type index, const std::size_t pos)
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
         it->second = pos;
+        return;
     }
     throw Error{"file is not opened"};
 }
