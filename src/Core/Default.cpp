@@ -10,8 +10,10 @@ namespace {
 
 constexpr std::size_t bitmap_block_number = 0u;
 constexpr std::size_t first_descriptor_block = bitmap_block_number + 1;
+constexpr std::size_t fs_init_flag_bits = 1u; // number of bits reserved for flag telling whether fs is inited
 
 void set_bit(std::span<std::byte> bitmap, std::size_t index, bool value) {
+    index += fs_init_flag_bits;
     const auto block_num = index / CHAR_BIT;
     const auto in_block_position = index % CHAR_BIT;
     const auto bitmask = (std::byte{1} << (CHAR_BIT - 1 - in_block_position));
@@ -23,6 +25,7 @@ void set_bit(std::span<std::byte> bitmap, std::size_t index, bool value) {
 }
 
 auto get_bit(std::span<const std::byte> bitmap, std::size_t index) -> bool {
+    index += fs_init_flag_bits;
     const auto block_num = index / CHAR_BIT;
     const auto in_block_position = index % CHAR_BIT;
     const auto bitmask = std::byte{1};
@@ -55,8 +58,8 @@ struct Descriptor : UtilityStruct {
     }
 
     [[nodiscard]]
-    auto free_bytes(std::size_t block_size) const noexcept -> std::size_t {
-        return blocks_allocated(block_size) * block_size - length;
+    auto free_bytes(std::size_t block_size, std::size_t pos) const noexcept -> std::size_t {
+        return blocks_allocated(block_size) * block_size - pos;
     }
 };
 
@@ -77,7 +80,10 @@ Default::Default(std::unique_ptr<IO> io)
     , _descriptor_blocks_indexes(_k-1)
 {
     std::iota(_descriptor_blocks_indexes.begin(), _descriptor_blocks_indexes.end(), first_descriptor_block); // set indexes of descriptor blocks
-    init_root();
+    _io->read_block(bitmap_block_number, _block_buffer); // read bitmap to check the very first bit
+    if (!get_bit(_block_buffer, -1)) { // root reinitialization is needed
+        init_root();
+    }
 }
 
 auto Default::block_length() const noexcept -> std::size_t {
@@ -94,6 +100,11 @@ void Default::init_root() {
     {
         throw Error{"not enough disk space to initialize root directory"};
     }
+
+    std::fill(_block_buffer.begin() + 1, _block_buffer.end(), std::byte{0});
+    _block_buffer[0] = std::byte{1} << (CHAR_BIT - 1);
+
+    _io->write_block(bitmap_block_number, _block_buffer); // set a clear bitmap with fs init bit set to true
 }
 
 auto Default::calculate_k() const -> std::size_t {
@@ -179,7 +190,7 @@ auto Default::create(Directory::index_type dir, const File &file) -> Directory::
 
     if (!free_entry_slot) { // trying to allocate new blocks
         const auto blocks_allocated = directory_descriptor.blocks_allocated(block_length);
-        const auto bytes_available = directory_descriptor.free_bytes(block_length);
+        const auto bytes_available = directory_descriptor.free_bytes(block_length, directory_descriptor.length);
         const auto blocks_to_allocate = ((sizeof(Descriptor) - bytes_available) + block_length - 1) / block_length;
         if (blocks_to_allocate + blocks_allocated > directory_descriptor.blocks.size()) {
             throw Error("not enough space in directory to create a new file");
@@ -311,23 +322,24 @@ auto Default::write(Directory::Entry::index_type index, std::size_t pos,
             _descriptor_blocks_indexes.end(),
             descriptor_pos).value();
 
-    if (entry_descriptor.free_bytes(block_length) < src.size()) { // allocating new blocks
+    std::size_t new_blocks_allocated = 0u;
+    if (entry_descriptor.free_bytes(block_length, pos) < src.size()) { // allocating new blocks
         const auto blocks_allocated = entry_descriptor.blocks_allocated(block_length);
-        const auto bytes_available = entry_descriptor.free_bytes(block_length);
+        const auto bytes_available = entry_descriptor.free_bytes(block_length, pos);
         const auto blocks_to_allocate = (src.size() - bytes_available) + block_length / block_length;
 
         _io->read_block(bitmap_block_number, _block_buffer); // read bitmap from disk
-        const auto new_blocks_allocated = allocate_blocks(
+        new_blocks_allocated = allocate_blocks(
                 entry_descriptor.blocks,
                 blocks_allocated,
                 blocks_to_allocate,
                 block_length); // allocating as much blocks as possible
         _io->write_block(bitmap_block_number, _block_buffer); // write bitmap to disk
-
-        entry_descriptor.length += std::min(
-                bytes_available + new_blocks_allocated * block_length,
-                src.size()); // extending file length
     }
+
+    entry_descriptor.length = std::min(
+            (entry_descriptor.blocks_allocated(block_length) + new_blocks_allocated) * block_length,
+            entry_descriptor.length + src.size()); // extending file length
 
     write_value_to_disk_blocks(
             entry_descriptor,

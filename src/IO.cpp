@@ -39,7 +39,7 @@ void fs::IO::save(std::string_view path) const
     file.write(reinterpret_cast<const char*>(&nblocks), sizeof(nblocks));
     file.write(reinterpret_cast<const char*>(&block_len), sizeof(block_len));
     for (std::size_t i = 0; i < nblocks; ++i) {
-        file.write(reinterpret_cast<const char*>(_disk[i].data()), sizeof(block_len));
+        file.write(reinterpret_cast<const char*>(_disk[i].data()), block_len);
     }
 }
 
@@ -62,7 +62,7 @@ auto fs::IO::load(std::string_view path) -> std::optional<fs::IO>
     fs::IO io(nblocks, block_length);
     for (std::size_t i = 0; i < nblocks; ++i) {
         std::vector<std::byte> bytes(block_length);
-        file.read(reinterpret_cast<char*>(bytes.data()), sizeof(block_length));
+        file.read(reinterpret_cast<char*>(bytes.data()), block_length);
         io.write_block(i, bytes);
     }
     return io;
