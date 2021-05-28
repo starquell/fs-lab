@@ -10,8 +10,10 @@ namespace {
 
 constexpr std::size_t bitmap_block_number = 0u;
 constexpr std::size_t first_descriptor_block = bitmap_block_number + 1;
+constexpr std::size_t fs_init_flag_bits = 1u; // number of bits reserved for flag telling whether fs is inited
 
 void set_bit(std::span<std::byte> bitmap, std::size_t index, bool value) {
+    index += fs_init_flag_bits;
     const auto block_num = index / CHAR_BIT;
     const auto in_block_position = index % CHAR_BIT;
     const auto bitmask = (std::byte{1} << (CHAR_BIT - 1 - in_block_position));
@@ -23,6 +25,7 @@ void set_bit(std::span<std::byte> bitmap, std::size_t index, bool value) {
 }
 
 auto get_bit(std::span<const std::byte> bitmap, std::size_t index) -> bool {
+    index += fs_init_flag_bits;
     const auto block_num = index / CHAR_BIT;
     const auto in_block_position = index % CHAR_BIT;
     const auto bitmask = std::byte{1};
@@ -77,7 +80,10 @@ Default::Default(std::unique_ptr<IO> io)
     , _descriptor_blocks_indexes(_k-1)
 {
     std::iota(_descriptor_blocks_indexes.begin(), _descriptor_blocks_indexes.end(), first_descriptor_block); // set indexes of descriptor blocks
-    init_root();
+    _io->read_block(bitmap_block_number, _block_buffer); // read bitmap to check the very first bit
+    if (!get_bit(_block_buffer, -1)) { // root reinitialization is needed
+        init_root();
+    }
 }
 
 auto Default::block_length() const noexcept -> std::size_t {
@@ -94,6 +100,11 @@ void Default::init_root() {
     {
         throw Error{"not enough disk space to initialize root directory"};
     }
+
+    std::fill(_block_buffer.begin() + 1, _block_buffer.end(), std::byte{0});
+    _block_buffer[0] = std::byte{1} << (CHAR_BIT - 1);
+
+    _io->write_block(bitmap_block_number, _block_buffer); // set a clear bitmap with fs init bit set to true
 }
 
 auto Default::calculate_k() const -> std::size_t {
