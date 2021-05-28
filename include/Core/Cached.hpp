@@ -18,11 +18,6 @@ public:
      */
     explicit Cached(std::unique_ptr<IO> io) noexcept;
 
-     /**
-     * @brief Open file for further work.
-     */
-    auto open(Directory::Entry::index_type index) -> Directory::Entry override;
-
     /**
      * @brief Close file and possibly free all associated resources.
      */
@@ -69,10 +64,8 @@ private:
     mutable std::unordered_map<Directory::index_type, Directory> _dir_cache;  // file metadata cache
 
     struct Buffer {
-        std::size_t pos;
+        std::size_t buf_start_pos;
         std::vector<std::byte> data;
-
-        auto get_unread_bytes() -> std::span<std::byte>;
     };
     mutable std::unordered_map<Directory::Entry::index_type, Buffer> _buffers;
 };

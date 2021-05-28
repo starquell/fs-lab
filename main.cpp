@@ -151,7 +151,7 @@ struct rd
 {
     static constexpr std::string_view usage = "rd <index> <count>";
     static constexpr std::string_view description = "sequentially read a number of bytes <count> from the specified file <index> and display them on the terminal";
-    static constexpr std::string_view output = "({} bytes read: {}";
+    static constexpr std::string_view output = "{} bytes read: {}";
     static constexpr std::string_view cmd = "rd";
 
     struct Input

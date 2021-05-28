@@ -31,11 +31,6 @@ struct Interface
     virtual ~Interface() = default;
 
     /**
-     * @brief Open file for further work.
-     */
-    virtual auto open(Directory::Entry::index_type index) -> Directory::Entry = 0;
-
-    /**
      * @brief Close file and possibly free all associated resources.
      */
     virtual void close(Directory::Entry::index_type index) = 0;

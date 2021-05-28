@@ -25,13 +25,12 @@ void Filesystem::destroy(const std::string_view name)
     }
 }
 
-auto Filesystem::open(const std::string_view name) -> Directory::Entry::index_type
+auto Filesystem::open(const std::string_view name) -> file_index_type
 {
     if (auto file = _core->search(_cd, name); file.has_value()) {
         if (_oft.contains(*file)) {
             throw Error{"file is already open."};
         } else {
-            _core->open(*file);
             _oft[*file] = 0;
             return *file;
         }
@@ -40,7 +39,7 @@ auto Filesystem::open(const std::string_view name) -> Directory::Entry::index_ty
     }
 }
 
-void Filesystem::close(const Directory::Entry::index_type index)
+void Filesystem::close(const file_index_type index)
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
         _core->close(index);
@@ -50,7 +49,7 @@ void Filesystem::close(const Directory::Entry::index_type index)
     throw Error{"file is not opened"};
 }
 
-auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t
+auto Filesystem::read(const file_index_type index, std::span<std::byte> dst) const -> std::size_t
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
         const auto read = _core->read(index, it->second, dst);
@@ -60,7 +59,7 @@ auto Filesystem::read(const Directory::Entry::index_type index, std::span<std::b
     throw Error{"file is not opened"};
 };
 
-auto Filesystem::write(const Directory::Entry::index_type index, const std::span<const std::byte> src) -> std::size_t
+auto Filesystem::write(const file_index_type index, const std::span<const std::byte> src) -> std::size_t
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
         const auto written = _core->write(index, it->second, src);
@@ -70,10 +69,11 @@ auto Filesystem::write(const Directory::Entry::index_type index, const std::span
     throw Error{"file is not opened"};
 }
 
-void Filesystem::lseek(const Directory::Entry::index_type index, const std::size_t pos)
+void Filesystem::lseek(const file_index_type index, const std::size_t pos)
 {
     if (auto it = _oft.find(index); it != _oft.end()) {
         it->second = pos;
+        return;
     }
     throw Error{"file is not opened"};
 }
@@ -83,7 +83,7 @@ auto Filesystem::directory() const -> std::vector<File>
     auto res = std::vector<File>{};
     auto entries = _core->get(_cd)->entries;
     std::transform(entries.begin(), entries.end(), std::back_inserter(res),
-                   [] (auto& entry) {return std::move(entry);}); // TODO: @starquell check this out. Some changes were required
+                   [] (auto& entry) -> File&& {return std::move(entry);}); // TODO: @starquell check this out. Some changes were required
     return res;
 }
 
