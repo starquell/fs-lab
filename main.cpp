@@ -285,7 +285,7 @@ struct in
             result = "initialized";
         }
 
-        auto cached = std::make_unique<fs::core::Default>(std::make_unique<fs::IO>(std::move(*io)));
+        auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
         fs = std::make_unique<fs::Filesystem>(std::move(cached));
         return std::tuple{std::move(result)};
     }

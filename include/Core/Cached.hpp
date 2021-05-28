@@ -61,7 +61,8 @@ public:
 
 
 private:
-    mutable std::unordered_map<Directory::index_type, Directory> _dir_cache;  // file metadata cache
+    mutable std::unordered_map<Directory::index_type, Directory> _dir_cache;
+    mutable std::unordered_map<Directory::Entry::index_type, std::pair<Directory::index_type, std::string>> _entry_info_cache;  // used for updating file`s sizes
 
     struct Buffer {
         std::size_t buf_start_pos;

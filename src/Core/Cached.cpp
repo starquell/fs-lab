@@ -35,7 +35,15 @@ auto Cached::read(Directory::Entry::index_type index, std::size_t pos, std::span
 
 auto Cached::write(Directory::Entry::index_type index, std::size_t pos, std::span<const std::byte> src) -> std::size_t
 {
-    return Default::write(index, pos, src);
+    const std::size_t bytes_written = Default::write(index, pos, src);
+    if (auto cached_file = _entry_info_cache.find(index); cached_file != _entry_info_cache.end()) {
+        auto& entries = _dir_cache[cached_file->second.first].entries;
+        const auto file = std::lower_bound(entries.begin(), entries.end(), cached_file->second.second,
+                                       [&] (const auto& file, const auto& name) { return file.name < name; });
+
+        file->size = std::max(file->size, pos + bytes_written);    // updating file size in cache
+    }
+    return bytes_written;
 }
 
 auto Cached::create(Directory::index_type dir, const File& file) -> Directory::Entry::index_type
@@ -43,14 +51,18 @@ auto Cached::create(Directory::index_type dir, const File& file) -> Directory::E
     const auto res = Default::create(dir, file);
     if (auto cached_dir_it = _dir_cache.find(dir); cached_dir_it != _dir_cache.end()) {    // caching entry in this block
         auto& cached_entries = cached_dir_it->second.entries;
-        cached_entries.insert(
+        auto inserted = cached_entries.insert(
                 std::upper_bound(cached_entries.begin(), cached_entries.end(), file,
                                  [&](const auto &lhs, const auto &rhs) { return lhs.name < rhs.name; }),
                 Directory::Entry{file, res}
         );
-    } else {    // adding cache for this dir entries
+        _entry_info_cache[inserted->index] = {dir, file.name};
+    } else {    // adding cache for this dir
         if (auto fetched_dir = Default::get(dir); fetched_dir.has_value()) {
-            _dir_cache[dir] = std::move(*fetched_dir);
+            const auto& cached_dir = _dir_cache[dir] = std::move(*fetched_dir);
+            for (const auto& cached_entry : cached_dir.entries) {
+                _entry_info_cache[cached_entry.index] = {dir, cached_entry.name};
+            }
         }
     }
     return res;
@@ -76,6 +88,7 @@ void Cached::remove(Directory::index_type dir, Directory::Entry::index_type inde
         auto& cached_entries = cached_dir_it->second.entries;
         cached_entries.erase(std::find_if(cached_entries.begin(), cached_entries.end(),
                                           [&](const auto &file) { return file.index == index; }));
+        _entry_info_cache.erase(index);
     }
 }
 
@@ -87,7 +100,10 @@ auto Cached::get(Directory::index_type dir) const -> std::optional<Directory>
     else {    // adding cache for this dir entries
         std::optional directory = Default::get(dir);
         if (directory.has_value()) {
-            _dir_cache[dir] = *directory;
+             const auto& cached_dir = _dir_cache[dir] = *directory;
+             for (const auto& cached_entry : cached_dir.entries) {
+                 _entry_info_cache[cached_entry.index] = {dir, cached_entry.name};
+            }
         }
         return directory;
     }
