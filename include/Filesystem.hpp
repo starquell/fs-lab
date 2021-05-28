@@ -16,6 +16,8 @@ namespace fs {
 class Filesystem
 {
 public:
+    using file_index_type = std::size_t;
+
     /**
      * @brief Construct filesystem from pointer to underlying interface.
      */
@@ -28,45 +30,48 @@ public:
     void update(core::Interface::Ptr core) noexcept;
 
     /**
-     * @brief TODO:
+     * @brief Creates file with name @a name
      */
     void create(std::string_view name);
 
     /**
-     * @brief TODO:
+     * @brief Removes file with name @a name
      */
     void destroy(std::string_view name);
 
     /**
-     * @brief TODO:
+     * @brief Opens file with name @a name
+     * @return Index of opened file
      */
     [[nodiscard]]
-    auto open(std::string_view name) -> Directory::Entry::index_type;
+    auto open(std::string_view name) -> file_index_type;
 
     /**
-     * @brief TODO:
+     * @brief Closes file with index @a index
      */
-    void close(Directory::Entry::index_type index);
+    void close(file_index_type index);
 
     /**
-     * @brief TODO:
-     */
-    [[nodiscard]]
-    auto read(Directory::Entry::index_type index, std::span<std::byte> dst) const -> std::size_t;
-
-    /**
-     * @brief TODO:
+     * @brief Reads dst.size() bytes from file with index @a index to @a dst
+     * @return Amount of read bytes (<= dst.size())
      */
     [[nodiscard]]
-    auto write(Directory::Entry::index_type index, std::span<const std::byte> src) -> std::size_t;
+    auto read(file_index_type index, std::span<std::byte> dst) const -> std::size_t;
 
     /**
-     * @brief TODO:
+     * @brief Writes src.size() bytes from @a dst to file with index @a index
+     * @return Amount of written bytes (<= src.size())
      */
-    void lseek(Directory::Entry::index_type index, std::size_t pos);
+    [[nodiscard]]
+    auto write(file_index_type index, std::span<const std::byte> src) -> std::size_t;
 
     /**
-     * @brief TODO:
+     * @brief Changes current position to @a pos in file with index @a index
+     */
+    void lseek(file_index_type index, std::size_t pos);
+
+    /**
+     * @brief Returns all files in directory
      */
     [[nodiscard]]
     auto directory() const -> std::vector<File>;
