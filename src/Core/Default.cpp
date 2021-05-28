@@ -349,8 +349,12 @@ auto Default::read(Directory::Entry::index_type index, std::size_t pos, std::spa
             _descriptor_blocks_indexes.end(),
             IOPosition::fromIndex(index * sizeof(Descriptor), block_length)).value();
 
+    if (pos >= entry_descriptor.length) {
+        return 0u;
+    }
+
     return read_bytes_from_disk_blocks(
-            dst,
+            std::span(dst.begin(), dst.begin() + std::min(dst.size(), entry_descriptor.length - pos)),
             entry_descriptor.blocks.begin(),
             entry_descriptor.blocks.begin() + entry_descriptor.blocks_allocated(block_length),
             IOPosition::fromIndex(pos, block_length));
