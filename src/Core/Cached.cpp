@@ -14,13 +14,10 @@ void Cached::close(Directory::Entry::index_type index)
 
 auto Cached::read(Directory::Entry::index_type index, std::size_t pos, std::span<std::byte> dst) const -> std::size_t
 {
-    Buffer* buf = nullptr;
     if (auto buf_it = _buffers.find(index); buf_it != _buffers.end()) {    // if exists buffer for this file
-         buf = &buf_it->second;
-         auto unread_buffer = buf->get_unread_bytes();
-         if (pos >= buf->pos && pos + dst.size() <= buf->pos + unread_buffer.size()) {    // if needed data buffered
-             std::copy_n(unread_buffer.begin(), dst.size(), dst.begin());
-             buf->pos += dst.size();
+         const Buffer& buf = buf_it->second;
+         if (pos >= buf.buf_start_pos && pos + dst.size() <= buf.buf_start_pos + buf.data.size()) {    // if needed data is buffered
+             std::copy_n(buf.data.begin() + (pos - buf.buf_start_pos), dst.size(), dst.begin());
              return dst.size();
          }
      }
@@ -30,17 +27,9 @@ auto Cached::read(Directory::Entry::index_type index, std::size_t pos, std::span
      const std::size_t read_requested_bytes = std::min(dst.size(), read_bytes);
      std::copy_n(temp_buf.begin(), read_requested_bytes, dst.begin());
 
-     const std::size_t new_buf_size = (pos + read_bytes) % block_length() == 0      // size of new buffer: <= size of block
-                                       ? block_length()
-                                       : (pos + read_bytes) % block_length();
-     if (!buf) {    // buffering this file
-         auto& elem = (_buffers[index] = Buffer{.pos = pos + read_requested_bytes, .data = std::vector<std::byte>(new_buf_size)});
-         buf = &elem;
-     } else {   // update old buffer
-         buf->pos += read_requested_bytes;
-         buf->data.resize(new_buf_size);
-     }
-     std::copy_n(temp_buf.begin() + read_bytes - new_buf_size, new_buf_size, buf->data.begin());
+     auto& buf = _buffers[index];
+     buf = Buffer{.buf_start_pos = pos, .data = std::move(temp_buf)};
+     buf.data.resize(read_bytes);
      return read_requested_bytes;
 }
 
@@ -60,7 +49,7 @@ auto Cached::create(Directory::index_type dir, const File& file) -> Directory::E
                 Directory::Entry{file, res}
         );
     } else {    // adding cache for this dir entries
-        if (std::optional fetched_dir = get(dir)) {
+        if (auto fetched_dir = Default::get(dir); fetched_dir.has_value()) {
             _dir_cache[dir] = std::move(*fetched_dir);
         }
     }
@@ -102,10 +91,5 @@ auto Cached::get(Directory::index_type dir) const -> std::optional<Directory>
         }
         return directory;
     }
-}
-
-auto Cached::Buffer::get_unread_bytes() -> std::span<std::byte>
-{
-    return {data.data() + data.size() - (pos % data.size()), data.data() + data.size()};
 }
 } // namespace fs::core

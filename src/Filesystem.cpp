@@ -83,7 +83,7 @@ auto Filesystem::directory() const -> std::vector<File>
     auto res = std::vector<File>{};
     auto entries = _core->get(_cd)->entries;
     std::transform(entries.begin(), entries.end(), std::back_inserter(res),
-                   [] (auto& entry) {return std::move(entry);}); // TODO: @starquell check this out. Some changes were required
+                   [] (auto& entry) -> File&& {return std::move(entry);}); // TODO: @starquell check this out. Some changes were required
     return res;
 }
 

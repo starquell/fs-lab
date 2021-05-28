@@ -64,10 +64,8 @@ private:
     mutable std::unordered_map<Directory::index_type, Directory> _dir_cache;  // file metadata cache
 
     struct Buffer {
-        std::size_t pos;
+        std::size_t buf_start_pos;
         std::vector<std::byte> data;
-
-        auto get_unread_bytes() -> std::span<std::byte>;
     };
     mutable std::unordered_map<Directory::Entry::index_type, Buffer> _buffers;
 };
