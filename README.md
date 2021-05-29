@@ -1,6 +1,12 @@
 # Lab FS
 
 Assignment was meant to create simple filesystem simulator according to [spec](https://drive.google.com/file/d/0B-BUpwNPP_9JS2lobnpDVlBZMWc/view).
+
+### Variant
+
+* on demand buffering;
+* directory state caching in write-through fashion;
+
 ### Requirements
 
 * CMake 3.9+;
