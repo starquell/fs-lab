@@ -9,6 +9,7 @@
 #include <string_view>
 #include <iostream>
 #include <charconv>
+#include <optional>
 #include <string>
 #include <tuple>
 
@@ -55,12 +56,12 @@ namespace detail {
 
 } // namespace detail
 
-struct cd
+struct cr
 {
-    static constexpr std::string_view usage = "cd <name>";
+    static constexpr std::string_view usage = "cr <name>";
     static constexpr std::string_view description = "create a new file with the name <name>";
     static constexpr std::string_view output = "file {} created";
-    static constexpr std::string_view cmd = "cd";
+    static constexpr std::string_view cmd = "cr";
 
     struct Input
     {
@@ -276,7 +277,7 @@ struct in
         };
     };
 
-    auto operator()(const Input in, std::unique_ptr<fs::Filesystem>& fs) const
+    auto operator()(const Input in, std::optional<fs::Filesystem>& fs) const
     {
         auto io = fs::IO::load(in.path);
         std::string result{"restored"};
@@ -286,7 +287,7 @@ struct in
         }
 
         auto cached = std::make_unique<fs::core::Cached>(std::make_unique<fs::IO>(std::move(*io)));
-        fs = std::make_unique<fs::Filesystem>(std::move(cached));
+        fs.emplace(std::move(cached));
         return std::tuple{std::move(result)};
     }
 };
@@ -313,7 +314,7 @@ struct sv
     }
 };
 
-using Commands = std::tuple<cd, de, op, cl, rd, wr, sk, dr, in, sv>;
+using Commands = std::tuple<cr, de, op, cl, rd, wr, sk, dr, in, sv>;
 
 template<typename F, typename... Args>
 void error(F&& format, Args&&... args)
@@ -363,7 +364,7 @@ int main()
     });
 
     /// Create dummy filesystem
-    std::unique_ptr<fs::Filesystem> fs;
+    std::optional<fs::Filesystem> fs;
 
     /// Run main loop
     for (;;) {

@@ -16,7 +16,7 @@ set(SRC_LIST
     src/IO.cpp
 )
 
-add_executable(main main.cpp ${SRC_LIST})
+add_executable(shell main.cpp ${SRC_LIST})
 
-target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(main PRIVATE fmt::fmt)
+target_include_directories(shell PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(shell PRIVATE fmt::fmt)
