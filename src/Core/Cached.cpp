@@ -2,7 +2,7 @@
 
 namespace fs::core {
 
-Cached::Cached(std::unique_ptr<IO> io) noexcept :
+Cached::Cached(std::unique_ptr<IO> io) :
     Default{std::move(io)}
 {}
 

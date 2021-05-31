@@ -16,7 +16,7 @@ public:
     /**
      * @brief Initialize with pointer to I/O system.
      */
-    explicit Cached(std::unique_ptr<IO> io) noexcept;
+    explicit Cached(std::unique_ptr<IO> io);
 
     /**
      * @brief Close file and possibly free all associated resources.

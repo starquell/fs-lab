@@ -308,9 +308,10 @@ struct sv
         };
     };
 
-    void operator()(const Input in, fs::Filesystem& fs) const
+    void operator()(const Input in, std::optional<fs::Filesystem>& fs) const
     {
-        fs.save(in.path);
+        fs->save(in.path);
+        fs.reset();
     }
 };
 
@@ -408,7 +409,11 @@ int main()
                             return error("filesystem should be initialized");
                         }
 
-                        process<cmd>(input, *fs);
+                        if constexpr (std::is_same_v<cmd, sv>) {
+                            process<cmd>(input, fs);
+                        } else {
+                            process<cmd>(input, *fs);
+                        }
                     }
                 } else {
                     if (!fs) {
